@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Un pequeño juego para ti</title>
+  <style>
+    :root {
+      --bg1: #fff0f6;
+      --bg2: #fde2e4;
+      --card: rgba(255,255,255,0.85);
+      --text: #5a2a3a;
+      --accent: #ff4d8d;
+      --accent-dark: #e63e7b;
+      --ok: #ff7aa2;
+      --shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .hearts {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .heart {
+      position: absolute;
+      bottom: -20px;
+      font-size: 18px;
+      animation: floatUp linear forwards;
+      opacity: 0.7;
+    }
+
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(1); opacity: 0; }
+      10% { opacity: 0.8; }
+      100% { transform: translateY(-110vh) scale(1.4); opacity: 0; }
+    }
+
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      position: relative;
+      z-index: 2;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin: 0 0 24px;
+      color: #7c4a5c;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .center { text-align: center; }
+
+    .btn {
+      border: none;
+      background: var(--accent);
+      color: white;
+      padding: 14px 22px;
+      border-radius: 999px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.2s ease;
+      box-shadow: 0 8px 20px rgba(255, 77, 141, 0.25);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      background: var(--accent-dark);
+    }
+
+    .progress-wrap {
+      width: 100%;
+      height: 14px;
+      background: #ffd3e0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 18px 0 22px;
+    }
+
+    .progress {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff8fb1, #ff4d8d);
+      transition: width 0.35s ease;
+    }
+
+    .question-box {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+    }
+
+    .question {
+      font-size: 1.25rem;
+      margin: 0 0 18px;
+      text-align: center;
+    }
+
+    .answers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .answer-btn {
+      border: 2px solid #ffd0de;
+      background: white;
+      color: var(--text);
+      padding: 14px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .answer-btn:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .feedback {
+      min-height: 28px;
+      text-align: center;
+      font-weight: bold;
+      margin-top: 14px;
+    }
+
+    .good { color: #c73872; }
+    .bad { color: #9b5b6f; }
+
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      font-size: 2rem;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .star {
+      width: 60px;
+      height: 60px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s ease, background 0.2s ease;
+      user-select: none;
+    }
+
+    .star:hover { transform: scale(1.08); }
+    .star.found { background: #ffe4ee; }
+
+    .final-message {
+      text-align: center;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      line-height: 1.5;
+      padding: 28px 16px;
+      background: linear-gradient(180deg, #fff, #fff6fa);
+      border-radius: 20px;
+      box-shadow: inset 0 0 0 1px rgba(255,77,141,0.08);
+      margin-top: 18px;
+    }
+
+    .tiny {
+      font-size: 0.95rem;
+      color: #7c4a5c;
+    }
+
+    @media (max-width: 640px) {
+      .answers { grid-template-columns: 1fr; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hearts" id="hearts"></div>
+
+  <div class="card">
+    <div id="startScreen" class="screen active">
+      <h1>Una misión para alguien especial 💖</h1>
+      <p class="subtitle">Supera estas pequeñas pruebas y descubre el mensaje final.</p>
+      <div class="center">
+        <button class="btn" onclick="startGame()">Comenzar</button>
+      </div>
+    </div>
+
+    <div id="quizScreen" class="screen">
+      <h1>Prueba 1: Nuestro mini reto</h1>
+      <p class="subtitle">Responde estas preguntas lindas ✨</p>
+      <div class="progress-wrap"><div class="progress" id="progressBar"></div></div>
+      <div class="question-box">
+        <p class="question" id="questionText"></p>
+        <div class="answers" id="answersBox"></div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+    </div>
+
+    <div id="starsScreen" class="screen">
+      <h1>Prueba 2: Atrapa las estrellas</h1>
+      <p class="subtitle">Encuentra 3 estrellas para desbloquear tu sorpresa.</p>
+      <div class="stars" id="starsContainer"></div>
+      <p class="center tiny" id="starsCount">Estrellas encontradas: 0 / 3</p>
+    </div>
+
+    <div id="finalScreen" class="screen">
+      <h1>Lo lograste 💫</h1>
+      <p class="subtitle">Y aquí está tu mensaje...</p>
+      <div class="final-message">
+        Te amo en este universo y en todos los que existan.
+      </div>
+      <p class="center tiny">Con mucho amor 💖</p>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        question: '¿Qué crees que hay al final de este juego?',
+        answers: ['Una sorpresa', 'Un examen', 'Nada', 'Un comercial'],
+        correct: 0
+      },
+      {
+        question: '¿Cuál de estas opciones suena más bonita?',
+        answers: ['Una galaxia contigo', 'Lavar trastes', 'Un lunes eterno', 'Despertador a las 5 AM'],
+        correct: 0
+      },
+      {
+        question: '¿Qué necesitas para ganar?',
+        answers: ['Suerte', 'Sonreír un poquito', 'Curiosidad', 'Todas las anteriores'],
+        correct: 3
+      }
+    ];
+
+    let currentQuestion = 0;
+    let starsFound = 0;
+    let totalStars = 6;
+    let targetStars = 3;
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function startGame() {
+      currentQuestion = 0;
+      renderQuestion();
+      showScreen('quizScreen');
+      spawnHeartsBurst(12);
+    }
+
+    function renderQuestion() {
+      const q = questions[currentQuestion];
+      document.getElementById('questionText').textContent = q.question;
+      const answersBox = document.getElementById('answersBox');
+      const feedback = document.getElementById('feedback');
+      feedback.textContent = '';
+      feedback.className = 'feedback';
+      answersBox.innerHTML = '';
+
+      q.answers.forEach((answer, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.textContent = answer;
+        btn.onclick = () => checkAnswer(index);
+        answersBox.appendChild(btn);
+      });
+
+      const progress = ((currentQuestion) / questions.length) * 100;
+      document.getElementById('progressBar').style.width = progress + '%';
+    }
+
+    function checkAnswer(index) {
+      const q = questions[currentQuestion];
+      const feedback = document.getElementById('feedback');
+
+      if (index === q.correct) {
+        feedback.textContent = '¡Correcto! 💕';
+        feedback.className = 'feedback good';
+        spawnHeartsBurst(6);
+      } else {
+        feedback.textContent = 'Respuesta tierna, pero intenta otra vez 💗';
+        feedback.className = 'feedback bad';
+        return;
+      }
+
+      setTimeout(() => {
+        currentQuestion++;
+        if (currentQuestion < questions.length) {
+          renderQuestion();
+        } else {
+          document.getElementById('progressBar').style.width = '100%';
+          loadStarsGame();
+          showScreen('starsScreen');
+        }
+      }, 650);
+    }
+
+    function loadStarsGame() {
+      starsFound = 0;
+      const container = document.getElementById('starsContainer');
+      container.innerHTML = '';
+      updateStarsText();
+
+      for (let i = 0; i < totalStars; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.textContent = Math.random() > 0.5 ? '⭐' : '✨';
+        star.dataset.isGood = i < targetStars ? 'yes' : 'no';
+        star.onclick = () => collectStar(star);
+        container.appendChild(star);
+      }
+
+      shuffleChildren(container);
+    }
+
+    function collectStar(star) {
+      if (star.classList.contains('found')) return;
+      star.classList.add('found');
+
+      if (star.dataset.isGood === 'yes') {
+        starsFound++;
+        star.textContent = '💖';
+        spawnHeartsBurst(5);
+      } else {
+        star.textContent = '🌙';
+      }
+
+      updateStarsText();
+
+      if (starsFound >= targetStars) {
+        setTimeout(() => {
+          showScreen('finalScreen');
+          spawnHeartsBurst(24);
+        }, 500);
+      }
+    }
+
+    function updateStarsText() {
+      document.getElementById('starsCount').textContent = `Estrellas encontradas: ${starsFound} / ${targetStars}`;
+    }
+
+    function shuffleChildren(parent) {
+      const children = Array.from(parent.children);
+      for (let i = children.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [children[i], children[j]] = [children[j], children[i]];
+      }
+      children.forEach(child => parent.appendChild(child));
+    }
+
+    function spawnHeartsBurst(count) {
+      const wrap = document.getElementById('hearts');
+      for (let i = 0; i < count; i++) {
+        const heart = document.createElement('div');
+        heart.className = 'heart';
+        heart.textContent = Math.random() > 0.5 ? '💖' : '💕';
+        heart.style.left = Math.random() * 100 + 'vw';
+        heart.style.animationDuration = (3 + Math.random() * 3) + 's';
+        heart.style.fontSize = (14 + Math.random() * 18) + 'px';
+        wrap.appendChild(heart);
+        setTimeout(() => heart.remove(), 6500);
+      }
+    }
+
+    setInterval(() => spawnHeartsBurst(2), 1800);
+  </script>
+</body>
+</html>
